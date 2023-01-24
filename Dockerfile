@@ -1,18 +1,19 @@
-FROM golang:latest
-ENV GO111MODULE=off
+FROM golang:latest AS builder
+#ENV GO111MODULE=off
 
-RUN apt update -y --allow-insecure-repositories && apt upgrade -y && \ 
-  apt install -y git && \
-  apt -y clean && \
-  go get -u -v github.com/riking/AutoDelete/cmd/autodelete
+COPY . /autodelete
+WORKDIR /autodelete
 
-RUN mkdir -p /autodelete/data && \
-  cp /go/src/github.com/riking/AutoDelete/docs/build.sh /autodelete/
+RUN go get
+
+RUN go build -v -o autodelete cmd/autodelete/main.go
+
+FROM gcr.io/distroless/base
+
+COPY --from=builder /autodelete/autodelete /autodelete
 
 ENV HOME=/
 
 EXPOSE 2202
 
-WORKDIR /autodelete/
-
-ENTRYPOINT ./build.sh && ./autodelete
+ENTRYPOINT ["/autodelete"]
